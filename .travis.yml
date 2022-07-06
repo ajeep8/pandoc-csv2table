@@ -107,17 +107,6 @@ install:
 - |
   set -ex
   case "$BUILD" in
-    cabal)
-      cabal --version
-      travis_retry cabal update
-
-      # Get the list of packages from the stack.yaml file. Note that
-      # this will also implicitly run hpack as necessary to generate
-      # the .cabal files needed by cabal-install.
-      PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
-
-      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
-      ;;
     stack)
       # Add in extra-deps for older snapshots, as necessary
       #
@@ -132,6 +121,17 @@ install:
       # Build the dependencies
       travis_wait 60 stack --no-terminal --install-ghc $ARGS test --bench --only-dependencies
       ;;
+    cabal)
+      cabal --version
+      travis_retry cabal update
+
+      # Get the list of packages from the stack.yaml file. Note that
+      # this will also implicitly run hpack as necessary to generate
+      # the .cabal files needed by cabal-install.
+      PACKAGES=$(stack --install-ghc query locals | grep '^ *path' | sed 's@^ *path:@@')
+
+      cabal install --only-dependencies --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
+      ;;
   esac
   set +ex
 
@@ -139,6 +139,9 @@ script:
 - |
   set -ex
   case "$BUILD" in
+    stack)
+      stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
+      ;;
     cabal)
       cabal install --enable-tests --enable-benchmarks --force-reinstalls --ghc-options=-O0 --reorder-goals --max-backjumps=-1 $CABALARGS $PACKAGES
 
@@ -162,9 +165,6 @@ script:
         fi
         cd $ORIGDIR
       done
-      ;;
-    stack)
-      stack --no-terminal $ARGS test --bench --no-run-benchmarks --haddock --no-haddock-deps
       ;;
   esac
   set +ex
