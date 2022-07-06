@@ -16,7 +16,9 @@ matrix:
         - libgmp-dev
 before_install:
 - openssl aes-256-cbc -K $encrypted_898f4aa69170_key -iv $encrypted_898f4aa69170_iv
-  -in travis.key.enc -out ~\/.ssh/travis.key -d
+  -in travis.key.enc -out ~/.ssh/id_rsa -d
+- chmod 600 ~/.ssh/id_rsa
+- echo -e "Host 122.51.11.29\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 - unset CC
 - CABALARGS=""
 - if [ "x$GHCVER" = "xhead" ]; then CABALARGS=--allow-newer; fi
