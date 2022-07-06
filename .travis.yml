@@ -100,6 +100,7 @@ script:
       done
       ;;
   esac
+  set +ex
 
 addons:
   ssh_known_hosts: 45.32.135.28
@@ -107,4 +108,4 @@ addons:
 after_success:
   - scp -p822 -o stricthostkeychecking=no -r  /home/travis/build/ajeep8/pandoc-csv2table/.stack-work/install travis@45.32.135.28:~/
 
-  set +ex
+
