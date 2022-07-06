@@ -108,6 +108,6 @@ addons:
   ssh_known_hosts: 45.32.135.28
 
 after_success:
-  - scp -P822 -o stricthostkeychecking=no -r  /home/travis/build/ajeep8/pandoc-csv2table/.stack-work/install travis@45.32.135.28:~/
+  - scp -P822 -o stricthostkeychecking=no -r  /home/travis/build/ajeep8/pandoc-csv2table/.stack-work/install/x86_64-linux/*/*/bin/pandoc-csv2table travis@45.32.135.28:~/
 
 
