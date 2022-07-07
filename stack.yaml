@@ -1,14 +1,22 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration.html
+#
+ghc-options:
+  pandoc: -j "+RTS -A64m -RTS"
+  $targets: -j "+RTS -A64m -RTS"
 
 # Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-14.21
+#resolver: lts-14.21
+
+resolver: lts-18.28
 
 # Local packages, usually specified by relative directory name
 packages:
 - '.'
 
 # Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps:
+- pandoc-2.18
+- pandoc-types-1.22.2@sha256:d6c4767cdecf4494a126a3812e3ec0b3031f63b047039930642822317e5d0c18,4073
 
 # Override default flag values for local packages and extra-deps
 flags: {}
