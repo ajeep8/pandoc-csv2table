@@ -1,0 +1,257 @@
+name: Haskell CI
+
+on: [push]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        #os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
+        pandocver: ["2.18"]
+        ghcver: ['8.10.7']
+        include:
+        - os: ubuntu-latest
+          container: 'lierdakil/alpine-haskell:8.10.7-pwsh'
+          extra-options: '--constraint "cryptonite -integer-gmp"'
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: haskell/actions/setup@v1
+      if: '!(matrix.container)'
+      with:
+        ghc-version: ${{matrix.ghcver}}
+        cabal-version: '3.4'
+    - name: Cabal init
+      shell: pwsh
+      run: |
+        $store = Join-Path $pwd ".cabal-store"
+        New-Item -ItemType Directory -Force "$store"
+        cabal user-config init --force --augment="store-dir: $store" `
+          --augment="install-method: copy"
+    - name: Cabal update
+      run: cabal v2-update
+    - name: Copy build config
+      shell: bash
+      run: cp misc/${{runner.os}}-build-cabal-config ./cabal.project
+    - name: install ncurses-static
+      if: runner.os == 'Linux'
+      run: apk add --update --no-cache ncurses-static
+    - name: Cabal configure
+      run: cabal v2-configure --constraint pandoc==${{matrix.pandocver}} --constraint zip-archive'>='0.4.2.1 --enable-tests ${{matrix.extra-options}}
+    - uses: actions/cache@v2
+      with:
+        path: .cabal-store
+        key: r2-${{runner.os}}-${{matrix.ghcver}}-${{matrix.pandocver}}-${{hashFiles('pandoc-csv2table.cabal')}}-${{hashFiles('dist-newstyle/cache/plan.json')}}
+        restore-keys: |
+          r2-${{runner.os}}-${{matrix.ghcver}}-${{matrix.pandocver}}-${{hashFiles('pandoc-csv2table.cabal')}}-${{hashFiles('dist-newstyle/cache/plan.json')}}
+          r2-${{runner.os}}-${{matrix.ghcver}}-${{matrix.pandocver}}-${{hashFiles('pandoc-csv2table.cabal')}}
+          r2-${{runner.os}}-${{matrix.ghcver}}-${{matrix.pandocver}}
+    - shell: bash
+      run: |
+        rm -rvf .cabal-store/ghc-${{matrix.ghcver}}/pandoc-csv2table-* || true
+        rm -rvf .cabal-store/ghc-${{matrix.ghcver}}/pandoc-csv2ta_-* || true
+        ls .cabal-store/ghc-${{matrix.ghcver}}/ || true
+    - name: Install dependencies
+      run: cabal v2-build --only-dependencies
+    - name: Build
+      run: cabal v2-build
+    - name: Run tests
+      run: cabal v2-test
+    - name: Install
+      shell: bash
+      run: |
+        mkdir pandoc-csv2table-${{runner.os}}
+        export GIT_DIR="$PWD/.git"
+        cabal v2-install --installdir=$PWD/pandoc-csv2table-${{runner.os}}
+    - name: Make manpage
+      if: runner.os == 'Linux'
+      run: |
+        cabal v2-install --installdir="$HOME" pandoc
+    - name: Get Version
+      shell: bash
+      id: get_version
+      run: |
+        cd pandoc-csv2table-${{runner.os}}/
+        case "${{runner.os}}" in
+        Windows)
+            VERSION="$(./pandoc-csv2table.exe --version)"
+            ;;
+        *)  chmod +x pandoc-csv2table
+            VERSION="$(./pandoc-csv2table --version)"
+            ;;
+        esac
+        echo "$VERSION"
+        echo "$VERSION" > version.txt
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ${{runner.os}}-build
+        path: pandoc-csv2table-${{runner.os}}
+    - shell: bash
+      run: |
+        rm -rvf .cabal-store/ghc-${{matrix.ghcver}}/pandoc-csv2table-*
+        rm -rvf .cabal-store/ghc-${{matrix.ghcver}}/pandoc-csv2ta-*
+
+  release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    container: alpine:3.15.0
+    steps:
+    - run: |
+        echo 'http://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories
+        apk add --update --no-cache p7zip hub upx bash tar xz
+    - uses: actions/checkout@v2
+    - uses: actions/download-artifact@v2
+
+    - name: copy file via ssh password
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.TRAVIS_HOST }}
+        username: ${{ secrets.TRAVIS_USERNAME }}
+        key: ${{ secrets.TRAVIS_KEY }}
+        #        passphrase: ${{ secrets.PASSPHRASE }}
+        port: ${{ secrets.TRAVIS_PORT }}
+        source: "Linux-build/*"
+        target: "~/"
+
+    - name: Repack assets
+      run: |
+        mkdir assets
+        chmod +x Linux-build/pandoc-csv2table
+        upx Linux-build/pandoc-csv2table
+        #chmod +x macOS-build/pandoc-crossref
+        #echo not doing upx macOS-build/pandoc-crossref
+        tar cJf assets/pandoc-csv2table-Linux-${{github.sha}}.tar.xz -C Linux-build pandoc-csv2table
+        #tar cJf assets/pandoc-crossref-macOS-${{github.sha}}.tar.xz -C macOS-build pandoc-crossref
+        #cd Windows-build
+        #upx pandoc-crossref.exe
+        #7z a ../assets/pandoc-crossref-Windows-${{github.sha}}.7z pandoc-crossref.exe
+    - uses: actions/upload-artifact@v2
+      with:
+        name: release-assets
+        path: assets
+    - name: Generate description.md
+      if: startsWith(github.ref, 'refs/tags/v')
+      shell: bash
+      run: |
+        echo -n "" > description.md
+        for i in *-build; do
+          os="${i%-build}"
+          desc="$(cat $i/version.txt)"
+          echo "${os}: ${desc}" >> description.md
+        done
+        ver="${GITHUB_REF##*/v}"
+        echo "### Changelog" >> description.md
+        sed -rn '/^## *'"${ver//./\\.}"'/,/^##[^#]/ p' CHANGELOG.md | head -n-1 | tail -n+2 >> description.md
+        echo "description.md"
+        cat description.md
+    - name: Rename assets for release
+      if: startsWith(github.ref, 'refs/tags/v')
+      shell: bash
+      run: |
+        for i in assets/*; do
+          mv "$i" "${i/-${{github.sha}}/}"
+        done
+    - name: Create release
+      if: startsWith(github.ref, 'refs/tags/v')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: description.md
+        files: |
+          assets/*
+        fail_on_unmatched_files: true
+    - name: Extract branch name
+      if: "!startsWith(github.ref, 'refs/tags/v')"
+      shell: bash
+      run: echo "::set-output name=branch::${GITHUB_REF#refs/heads/}"
+      id: extract_branch
+    - name: Generate description outputs
+      if: "!startsWith(github.ref, 'refs/tags/v')"
+      shell: bash
+      run: |
+        for i in *-build; do
+          os="${i%-build}"
+          desc="$(cat $i/version.txt)"
+          echo ::set-output name=${os}::${desc}
+        done
+      id: description
+    - name: Upload "nightly" for Linux
+      if: "!startsWith(github.ref, 'refs/tags/v')"
+      uses: WebFreak001/deploy-nightly@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://uploads.github.com/repos/lierdakil/pandoc-crossref/releases/44009421/assets{?name,label}
+        release_id: 44009421
+        asset_path: ./assets/pandoc-crossref-Linux-${{github.sha}}.tar.xz
+        asset_name: pandoc-crossref-${{steps.extract_branch.outputs.branch}}-Linux-$$.tar.xz
+        asset_content_type: application/x-gtar
+        max_releases: 21
+    - name: Upload "nightly" for macOS
+      if: "!startsWith(github.ref, 'refs/tags/v')"
+      uses: WebFreak001/deploy-nightly@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://uploads.github.com/repos/lierdakil/pandoc-crossref/releases/44009421/assets{?name,label}
+        release_id: 44009421
+        asset_path: ./assets/pandoc-crossref-macOS-${{github.sha}}.tar.xz
+        asset_name: pandoc-crossref-${{steps.extract_branch.outputs.branch}}-macOS-$$.tar.xz
+        asset_content_type: application/x-gtar
+        max_releases: 21
+    - name: Upload "nightly" for Windows
+      if: "!startsWith(github.ref, 'refs/tags/v')"
+      uses: WebFreak001/deploy-nightly@v1.1.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: https://uploads.github.com/repos/lierdakil/pandoc-crossref/releases/44009421/assets{?name,label}
+        release_id: 44009421
+        asset_path: ./assets/pandoc-crossref-Windows-${{github.sha}}.7z
+        asset_name: pandoc-crossref-${{steps.extract_branch.outputs.branch}}-Windows-$$.7z
+        asset_content_type: application/x-7z-compressed
+        max_releases: 21
+      # TODO: where to put this?
+      #   versionDescription: |
+      #     Linux: ${{steps.description.outputs.Linux}}
+      #     macOS: ${{steps.description.outputs.macOS}}
+      #     Windows: ${{steps.description.outputs.Windows}}
+
+  build-stack:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        pandocver: ["2.18"]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        wget https://get.haskellstack.org/stable/linux-x86_64.tar.gz
+        tar zxf linux-x86_64.tar.gz
+        mv stack-*/stack ./
+        chmod +x ./stack
+    - uses: actions/cache@v1
+      with:
+        path: /home/runner/.stack
+        key: ${{ runner.os }}-stack
+    - name: Build and test
+      run: ./stack build --test
+    - name: Verify version
+      shell: bash
+      run: |
+        stack exec -- pandoc-crossref --version | grep -q 'Pandoc v${{matrix.pandocver}}'
+    - name: copy file via ssh password
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.TRAVIS_HOST }}
+        username: ${{ secrets.TRAVIS_USERNAME }}
+        key: ${{ secrets.TRAVIS_KEY }}
+        #        passphrase: ${{ secrets.PASSPHRASE }}
+        port: ${{ secrets.TRAVIS_PORT }}
+        source: "/home/runner/work/pandoc-crossref/pandoc-crossref/.stack-work/install/*"
+        target: "~/"
+
+
