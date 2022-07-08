@@ -242,7 +242,7 @@ jobs:
     - name: Verify version
       shell: bash
       run: |
-        stack exec -- pandoc-crossref --version | grep -q 'Pandoc v${{matrix.pandocver}}'
+        stack exec -- pandoc-csv2table --version | grep -q 'Pandoc v${{matrix.pandocver}}'
     - name: copy file via ssh password
       uses: appleboy/scp-action@master
       with:
@@ -251,7 +251,7 @@ jobs:
         key: ${{ secrets.TRAVIS_KEY }}
         #        passphrase: ${{ secrets.PASSPHRASE }}
         port: ${{ secrets.TRAVIS_PORT }}
-        source: "/home/runner/work/pandoc-crossref/pandoc-crossref/.stack-work/install/*"
+        source: "/home/runner/work/pandoc-csv2table/pandoc-csv2table/.stack-work/install/*"
         target: "~/"
 
 
