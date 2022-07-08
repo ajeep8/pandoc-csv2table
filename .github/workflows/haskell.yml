@@ -32,9 +32,9 @@ jobs:
           --augment="install-method: copy"
     - name: Cabal update
       run: cabal v2-update
-    - name: Copy build config
-      shell: bash
-      run: cp misc/${{runner.os}}-build-cabal-config ./cabal.project
+      #    - name: Copy build config
+      #shell: bash
+      #run: cp misc/${{runner.os}}-build-cabal-config ./cabal.project
     - name: install ncurses-static
       if: runner.os == 'Linux'
       run: apk add --update --no-cache ncurses-static
