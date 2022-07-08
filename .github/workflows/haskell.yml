@@ -221,6 +221,7 @@ jobs:
       #     Windows: ${{steps.description.outputs.Windows}}
 
   build-stack:
+    needs: [release]
     runs-on: ubuntu-latest
     strategy:
       matrix:
