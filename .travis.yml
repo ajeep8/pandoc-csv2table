@@ -38,8 +38,13 @@ matrix:
 
   # The Stack builds. We can pass in arbitrary Stack arguments via the ARGS
   # variable, such as using --stack-yaml to point to a different file.
-  - env: BUILD=stack ARGS=""
-    compiler: ": #stack default"
+  #- env: BUILD=stack ARGS=""
+  #  compiler: ": #stack default"
+  #  addons: {apt: {packages: [libgmp-dev]}}
+
+  # Has pandoc-2.18
+  - env: BUILD=stack ARGS="--resolver lts-18.28"
+    compiler: ": #stack 8.6.5"
     addons: {apt: {packages: [libgmp-dev]}}
 
   #- env: BUILD=stack ARGS="--resolver lts-2"
@@ -65,11 +70,6 @@ matrix:
 
   # Has pandoc-2.7.3
   #- env: BUILD=stack ARGS="--resolver lts-14.21"
-  #  compiler: ": #stack 8.6.5"
-  #  addons: {apt: {packages: [libgmp-dev]}}
-
-  # Has pandoc-2.18
-  #- env: BUILD=stack ARGS="--resolver lts-18.28"
   #  compiler: ": #stack 8.6.5"
   #  addons: {apt: {packages: [libgmp-dev]}}
 

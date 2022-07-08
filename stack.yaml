@@ -1,5 +1,14 @@
 # For more information, see: http://docs.haskellstack.org/en/stable/yaml_configuration.html
 
+# Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
+resolver: lts-18.28
+#resolver: lts-14.21
+
+# Local packages, usually specified by relative directory name
+packages:
+- '.'
+
+# Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 extra-deps:
 - pandoc-2.18
 - citeproc-0.7@sha256:779de5879e324ea3304174de4fdb3d58867d5af9c1f67197051cef59435c9329,5655
@@ -28,16 +37,6 @@ extra-deps:
 - skylighting-core-0.12.3.1@sha256:436dc32581d42cfb207327153b61f36a851a6ad3ae2141dc7af79b76570f58e6,8053
 - texmath-0.12.5@sha256:b5ff26862318501ceb1d64d78c8f6cb40014c586322cdea1b763b729fb9c5563,6609
 - unicode-data-0.3.0@sha256:0545e079705a5381d0893f8fe8daaa08fc9174baeab269b9cf651817d8eadbc6,5123
-
-# Specifies the GHC version and set of packages available (e.g., lts-3.5, nightly-2015-09-21, ghc-7.10.2)
-resolver: lts-18.28
-#resolver: lts-14.21
-
-# Local packages, usually specified by relative directory name
-packages:
-- '.'
-
-# Packages to be pulled from upstream that are not in the resolver (e.g., acme-missiles-0.3)
 
 # Override default flag values for local packages and extra-deps
 flags: {}
