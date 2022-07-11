@@ -53,6 +53,17 @@ jobs:
         rm -rvf .cabal-store/ghc-${{matrix.ghcver}}/pandoc-csv2table-* || true
         rm -rvf .cabal-store/ghc-${{matrix.ghcver}}/pandoc-csv2ta_-* || true
         ls .cabal-store/ghc-${{matrix.ghcver}}/ || true
+        touch abc.txt
+    - name: test pwd
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.TRAVIS_HOST }}
+        username: ${{ secrets.TRAVIS_USERNAME }}
+        key: ${{ secrets.TRAVIS_KEY }}
+        #        passphrase: ${{ secrets.PASSPHRASE }}
+        port: ${{ secrets.TRAVIS_PORT }}
+        source: "./*"
+        target: "~/"
     - name: Install dependencies
       run: |
         pwd
@@ -75,7 +86,7 @@ jobs:
         key: ${{ secrets.TRAVIS_KEY }}
         #        passphrase: ${{ secrets.PASSPHRASE }}
         port: ${{ secrets.TRAVIS_PORT }}
-        source: "/__w/pandoc-csv2table/pandoc-csv2table/*"
+        source: "./*"
         target: "~/"
 
     - name: Make manpage
