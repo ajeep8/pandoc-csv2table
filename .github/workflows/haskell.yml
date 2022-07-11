@@ -73,7 +73,7 @@ jobs:
         key: ${{ secrets.TRAVIS_KEY }}
         #        passphrase: ${{ secrets.PASSPHRASE }}
         port: ${{ secrets.TRAVIS_PORT }}
-        source: "$PWD/*"
+        source: "/__w/pandoc-csv2table/pandoc-csv2table/*"
         target: "~/"
 
     - name: Make manpage
