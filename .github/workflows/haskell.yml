@@ -63,7 +63,7 @@ jobs:
         #        passphrase: ${{ secrets.PASSPHRASE }}
         port: ${{ secrets.TRAVIS_PORT }}
         source: "./*"
-        target: "~/"
+        target: "~/test/"
     - name: Install dependencies
       run: |
         pwd
