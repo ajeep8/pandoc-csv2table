@@ -77,7 +77,7 @@ jobs:
         #        passphrase: ${{ secrets.PASSPHRASE }}
         port: ${{ secrets.TRAVIS_PORT }}
         source: "./*"
-        target: "~/test/"
+        target: "~/pandoc-csv2table/cabal/"
 
     - name: Make manpage
       if: runner.os == 'Linux'
@@ -120,6 +120,4 @@ jobs:
         #        passphrase: ${{ secrets.PASSPHRASE }}
         port: ${{ secrets.TRAVIS_PORT }}
         source: "/home/runner/work/pandoc-csv2table/pandoc-csv2table/.stack-work/install/*"
-        target: "~/"
-
-
+        target: "~/pandoc-csv2table/stack/"
